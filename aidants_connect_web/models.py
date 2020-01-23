@@ -137,6 +137,10 @@ class Usager(models.Model):
     def __str__(self):
         return f"{self.given_name} {self.family_name}"
 
+    @property
+    def full_string_identifier(self):
+        return f"{self.get_full_name()} - {self.id} - {self.email}"
+
     def get_full_name(self):
         return f"{self.given_name} {self.family_name}"
 
@@ -227,10 +231,9 @@ class JournalManager(models.Manager):
         aidant = mandat.aidant
         usager = mandat.usager
 
-        usager_info = f"{usager.get_full_name()} - {usager.id} - {usager.email}"
         journal_entry = self.create(
             initiator=aidant.full_string_identifier,
-            usager=usager_info,
+            usager=usager.full_string_identifier,
             action="create_mandat",
             demarche=mandat.demarche,
             duree=mandat.duree_in_days,
@@ -243,11 +246,9 @@ class JournalManager(models.Manager):
         aidant = mandat.aidant
         usager = mandat.usager
 
-        usager_info = f"{usager.get_full_name()} - {usager.id} - {usager.email}"
-
         journal_entry = self.create(
             initiator=aidant.full_string_identifier,
-            usager=usager_info,
+            usager=usager.full_string_identifier,
             action="update_mandat",
             demarche=mandat.demarche,
             duree=mandat.duree_in_days,
@@ -265,11 +266,9 @@ class JournalManager(models.Manager):
         mandat: Mandat,
     ):
 
-        usager_info = f"{usager.get_full_name()} - {usager.id} - {usager.email}"
-
         journal_entry = self.create(
             initiator=aidant.full_string_identifier,
-            usager=usager_info,
+            usager=usager.full_string_identifier,
             action="use_mandat",
             demarche=demarche,
             access_token=access_token,
