@@ -132,4 +132,4 @@ class UseNewMandat(StaticLiveServerTestCase):
 
     def aidant_is_disconnected(self, browser):
         browser.get(f"{self.live_server_url}/authorize/?state=35")
-        browser.find_element_by_id("id_email")
+        self.assertEqual(len(browser.find_elements_by_id("id_email")), 1)
