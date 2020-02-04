@@ -5,10 +5,8 @@ import time
 
 from secrets import token_urlsafe
 from django.http import (
-    HttpResponseForbidden,
     HttpResponse,
     JsonResponse,
-    HttpResponseBadRequest,
 )
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
@@ -73,6 +71,13 @@ def check_request_parameters(
     return 0, "all good"
 
 
+def redirect_error_to_fc(error: str, state: str = None):
+    redirect_url = f"{settings.FC_AS_FI_CALLBACK_URL}?error={error}"
+    if state:
+        redirect_url += f"&state={state}"
+    return redirect(redirect_url)
+
+
 @login_required
 def authorize(request):
     if request.method == "GET":
@@ -97,11 +102,7 @@ def authorize(request):
             parameters, EXPECTED_STATIC_PARAMETERS, "authorize"
         )
         if error:
-            return (
-                HttpResponseBadRequest()
-                if message == "missing parameter"
-                else HttpResponseForbidden()
-            )
+            return redirect_error_to_fc("invalid_request_uri", parameters["state"])
 
         connection = Connection.objects.create(
             state=parameters["state"], nonce=parameters["nonce"],
@@ -128,12 +129,12 @@ def authorize(request):
             connection = Connection.objects.get(pk=parameters["connection_id"])
             if connection.is_expired:
                 log.info("Connexion has expired at authorize")
-                return HttpResponseBadRequest()
+                return redirect_error_to_fc("access_denied")
         except ObjectDoesNotExist:
             log.info("No connection corresponds to the connection_id:")
             log.info(parameters["connection_id"])
             logout(request)
-            return HttpResponseForbidden()
+            return redirect_error_to_fc("access_denied")
 
         chosen_usager = Usager.objects.get(pk=parameters["chosen_usager"])
         if chosen_usager not in request.user.get_usagers_with_active_mandat():
@@ -141,7 +142,7 @@ def authorize(request):
             log.info(request.user.id)
             logout(chosen_usager.id)
             logout(request)
-            return HttpResponseForbidden()
+            return redirect_error_to_fc("access_denied")
 
         connection.usager = chosen_usager
         connection.save()
@@ -163,12 +164,12 @@ def fi_select_demarche(request):
             connection = Connection.objects.get(pk=parameters["connection_id"])
             if connection.is_expired:
                 log.info("Connexion has expired at select demarche")
-                return HttpResponseBadRequest()
+                return redirect_error_to_fc("access_denied")
         except ObjectDoesNotExist:
             log.info("No connection corresponds to the connection_id:")
             log.info(parameters["connection_id"])
             logout(request)
-            return HttpResponseForbidden()
+            return redirect_error_to_fc("access_denied")
 
         aidant = request.user
         usager_demarches = aidant.get_active_demarches_for_usager(connection.usager)
@@ -198,12 +199,12 @@ def fi_select_demarche(request):
             connection = Connection.objects.get(pk=parameters["connection_id"])
             if connection.is_expired:
                 log.info("Connexion has expired at select demarche")
-                return HttpResponseBadRequest()
+                return redirect_error_to_fc("access_denied")
         except ObjectDoesNotExist:
             log.info("No connection corresponds to the connection_id:")
             log.info(parameters["connection_id"])
             logout(request)
-            return HttpResponseForbidden()
+            return redirect_error_to_fc("access_denied")
 
         try:
             chosen_mandat = Mandat.objects.get(
@@ -214,7 +215,7 @@ def fi_select_demarche(request):
             )
         except Mandat.DoesNotExist:
             log.info("The mandat asked does not exist")
-            return HttpResponseForbidden()
+            return redirect_error_to_fc("access_denied")
 
         code = token_urlsafe(64)
         connection.code = make_password(code, settings.FC_AS_FI_HASH_SALT)
@@ -256,32 +257,27 @@ def token(request):
         parameters, EXPECTED_STATIC_PARAMETERS, "token"
     )
     if error:
-        return (
-            HttpResponseBadRequest()
-            if message == "missing parameter"
-            else HttpResponseForbidden()
-        )
+        return redirect_error_to_fc("invalid_request_uri")
 
     code_hash = make_password(parameters["code"], settings.FC_AS_FI_HASH_SALT)
     try:
         connection = Connection.objects.get(code=code_hash)
         if connection.is_expired:
             log.info("Connexion has expired at token")
-            return HttpResponseBadRequest()
+            return redirect_error_to_fc("access_denied")
     except ObjectDoesNotExist:
         log.info("403: /token No connection corresponds to the code")
         log.info(parameters["code"])
-        return HttpResponseForbidden()
+        return redirect_error_to_fc("access_denied")
 
     id_token = {
         # The audience, the Client ID of your Auth0 Application
         "aud": settings.FC_AS_FI_ID,
         # The expiration time. in the format "seconds since epoch"
-        # TODO Check if 10 minutes is not too much
         "exp": int(time.time()) + settings.CONNECTION_EXPIRATION_TIME_MINUTES * 60,
         # The issued at time
         "iat": int(time.time()),
-        # The issuer,  the URL of your Auth0 tenant
+        # The issuer, the URL of your Auth0 tenant
         "iss": settings.HOST,
         # The unique identifier of the user
         "sub": connection.usager.sub,
@@ -309,12 +305,12 @@ def user_info(request):
     auth_header = request.META.get("HTTP_AUTHORIZATION")
     if not auth_header:
         log.info("403: Missing auth header")
-        return HttpResponseForbidden()
+        return redirect_error_to_fc("access_denied")
 
     pattern = re.compile(r"^Bearer\s([A-Z-a-z-0-9-_/-]+)$")
     if not pattern.match(auth_header):
         log.info("Auth header has wrong format")
-        return HttpResponseForbidden()
+        return redirect_error_to_fc("access_denied")
 
     auth_token = auth_header[7:]
     auth_token_hash = make_password(auth_token, settings.FC_AS_FI_HASH_SALT)
@@ -322,11 +318,11 @@ def user_info(request):
         connection = Connection.objects.get(access_token=auth_token_hash)
         if connection.is_expired:
             log.info("Connexion has expired at user_info")
-            return HttpResponseBadRequest()
+            return redirect_error_to_fc("access_denied")
     except ObjectDoesNotExist:
         log.info("403: /user_info No connection corresponds to the access_token")
         log.info(auth_token)
-        return HttpResponseForbidden()
+        return redirect_error_to_fc("access_denied")
 
     usager = model_to_dict(connection.usager)
     del usager["id"]
