@@ -33,7 +33,8 @@ class UsagerFactory(factory.DjangoModelFactory):
     birthplace = 27681
     birthcountry = 99100
     email = "homer@simpson.com"
-    sub = "123"
+    sub_fc = "123"
+    # sub_fi = "456"
 
     class Meta:
         model = Usager

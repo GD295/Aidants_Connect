@@ -28,32 +28,12 @@ class ConnectionModelTest(TestCase):
         first_connexion.state = "aZeRtY"
         first_connexion.code = "ert"
         first_connexion.nonce = "varg"
-        first_connexion.usager = Usager.objects.create(
-            given_name="Joséphine",
-            family_name="ST-PIERRE",
-            preferred_username="ST-PIERRE",
-            birthdate="1969-12-15",
-            gender="female",
-            birthplace="70447",
-            birthcountry="99100",
-            sub="123",
-            email="User@user.domain",
-        )
+        first_connexion.usager = UsagerFactory(given_name="Joséphine", sub_fc="123")
         first_connexion.save()
 
         second_connexion = Connection()
         second_connexion.state = "QsDfG"
-        second_connexion.usager = Usager.objects.create(
-            given_name="Fabrice",
-            family_name="MERCIER",
-            preferred_username="TROIS",
-            birthdate="1981-07-27",
-            gender="male",
-            birthplace="70447",
-            birthcountry="99100",
-            sub="124",
-            email="User@user.domain",
-        )
+        second_connexion.usager = UsagerFactory(given_name="Fabrice", sub_fc="124")
         second_connexion.save()
 
         saved_items = Connection.objects.all()
@@ -81,7 +61,7 @@ class UsagerModelTest(TestCase):
         first_usager.birthplace = 27681
         first_usager.birthcountry = 99100
         first_usager.email = "user@test.user"
-        first_usager.sub = "1233"
+        first_usager.sub_fc = "1233"
         first_usager.save()
 
         second_usager = Usager()
@@ -93,7 +73,7 @@ class UsagerModelTest(TestCase):
         second_usager.birthplace = 84016
         second_usager.birthcountry = 99100
         second_usager.email = "other_user@test.user"
-        second_usager.sub = "1234"
+        second_usager.sub_fc = "1234"
         second_usager.save()
 
         saved_items = Usager.objects.all()
@@ -105,6 +85,7 @@ class UsagerModelTest(TestCase):
         self.assertEqual(first_saved_item.given_name, "TEST NAME")
         self.assertEqual(str(first_saved_item.birthdate), "1902-06-30")
         self.assertEqual(second_saved_item.family_name, "TEST Family Name éèà")
+        self.assertTrue(first_saved_item.sub_fi)
 
 
 @tag("models")
@@ -113,26 +94,8 @@ class MandatModelTest(TestCase):
     def setUpTestData(cls):
         cls.aidant_marge = UserFactory(username="Marge")
         cls.aidant_patricia = UserFactory(username="Patricia")
-        cls.usager_homer = Usager.objects.create(
-            given_name="Homer",
-            family_name="Simpson",
-            birthdate="1902-06-30",
-            gender="male",
-            birthplace=27681,
-            birthcountry=99100,
-            email="homer@simpson.com",
-            sub="123",
-        )
-        cls.usager_ned = Usager.objects.create(
-            given_name="Ned",
-            family_name="Flanders",
-            birthdate="1902-06-30",
-            gender="male",
-            birthplace=26934,
-            birthcountry=99100,
-            email="ned@flanders.com",
-            sub="1234",
-        )
+        cls.usager_homer = UsagerFactory(given_name="Homer", sub_fc="123")
+        cls.usager_ned = UsagerFactory(family_name="Flanders", sub_fc="1234")
 
     def test_saving_and_retrieving_mandat(self):
         first_mandat = Mandat.objects.create(
@@ -251,9 +214,9 @@ class AidantModelMethodsTest(TestCase):
     def setUpTestData(cls):
         cls.aidant_marge = UserFactory(username="Marge")
         cls.aidant_patricia = UserFactory(username="Patricia")
-        cls.usager_homer = UsagerFactory(given_name="Homer", sub="123")
-        cls.usager_ned = UsagerFactory(given_name="Ned", sub="1234")
-        cls.usager_bart = UsagerFactory(given_name="Bart", sub="1235")
+        cls.usager_homer = UsagerFactory(given_name="Homer", sub_fc="123")
+        cls.usager_ned = UsagerFactory(given_name="Ned", sub_fc="1234")
+        cls.usager_bart = UsagerFactory(given_name="Bart", sub_fc="1235")
         Mandat.objects.create(
             aidant=cls.aidant_marge,
             usager=cls.usager_homer,
@@ -361,15 +324,8 @@ class JournalModelTest(TestCase):
             last_name="Martin",
             organisation=OrganisationFactory(name="Commune de Vernon"),
         )
-        cls.usager_ned = Usager.objects.create(
-            given_name="Ned",
-            family_name="Flanders",
-            birthdate="1902-06-30",
-            gender="male",
-            birthplace=26934,
-            birthcountry=99100,
-            email="ned@flanders.com",
-            sub="1234",
+        cls.usager_ned = UsagerFactory(
+            given_name="Ned", family_name="Flanders", sub_fc="1234"
         )
 
         cls.first_mandat = Mandat.objects.create(

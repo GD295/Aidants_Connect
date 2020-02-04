@@ -112,11 +112,10 @@ def fc_callback(request):
     if connection.expiresOn < timezone.now():
         log.info("403: The connection has expired.")
         return HttpResponseForbidden()
+
     try:
-        usager = Usager.objects.get(sub=decoded_token["sub"])
-
+        usager = Usager.objects.get(sub_fc=decoded_token["sub"])
     except Usager.DoesNotExist:
-
         usager, error = get_user_info(fc_base, connection.access_token)
         if error:
             messages.error(request, error)
@@ -147,7 +146,7 @@ def get_user_info(fc_base: str, access_token: str) -> tuple:
             gender=user_info.get("gender"),
             birthplace=user_info.get("birthplace"),
             birthcountry=user_info.get("birthcountry"),
-            sub=user_info.get("sub"),
+            sub_fc=user_info.get("sub"),
         )
         return usager, None
 

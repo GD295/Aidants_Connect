@@ -1,3 +1,4 @@
+import time
 from django.core import mail
 
 
@@ -7,6 +8,7 @@ def login_aidant(self):
     submit_button = self.selenium.find_element_by_xpath("//button")
     submit_button.click()
     email_sent_title = self.selenium.find_element_by_tag_name("h1").text
+    time.sleep(5)
     self.assertEqual(
         email_sent_title, "Un email vous a été envoyé pour vous connecter."
     )

@@ -21,7 +21,7 @@ from aidants_connect_web.models import (
     CONNECTION_EXPIRATION_TIME,
     Journal,
 )
-from aidants_connect_web.tests import factories
+from aidants_connect_web.tests.factories import UserFactory, UsagerFactory
 
 fc_callback_url = settings.FC_AS_FI_CALLBACK_URL
 
@@ -30,42 +30,31 @@ fc_callback_url = settings.FC_AS_FI_CALLBACK_URL
 class AuthorizeTests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.aidant_thierry = factories.UserFactory()
-        self.aidant_jacques = factories.UserFactory(
+        self.aidant_thierry = UserFactory()
+        self.aidant_jacques = UserFactory(
             username="jacques@domain.user", email="jacques@domain.user"
         )
         Aidant.objects.create_user(
             "Jacques", "jacques@domain.user", "motdepassedejacques"
         )
-        self.usager = Usager.objects.create(
-            given_name="Joséphine",
-            family_name="ST-PIERRE",
-            preferred_username="ST-PIERRE",
-            birthdate="1969-12-15",
-            gender="female",
-            birthplace="70447",
-            birthcountry="99100",
-            sub="123",
-            email="User@user.domain",
-            id=1,
-        )
+        self.usager = UsagerFactory(given_name="Joséphine", sub_fc="123")
         Mandat.objects.create(
             aidant=Aidant.objects.get(username="thierry@thierry.com"),
-            usager=Usager.objects.get(sub="123"),
+            usager=Usager.objects.get(sub_fc="123"),
             demarche="Revenus",
             expiration_date=timezone.now() + timedelta(days=6),
         )
 
         Mandat.objects.create(
             aidant=Aidant.objects.get(username="thierry@thierry.com"),
-            usager=Usager.objects.get(sub="123"),
+            usager=Usager.objects.get(sub_fc="123"),
             demarche="Famille",
             expiration_date=timezone.now() + timedelta(days=12),
         )
 
         Mandat.objects.create(
             aidant=Aidant.objects.get(username=self.aidant_jacques.username),
-            usager=Usager.objects.get(sub="123"),
+            usager=Usager.objects.get(sub_fc="123"),
             demarche="Logement",
             expiration_date=timezone.now() + timedelta(days=12),
         )
@@ -76,7 +65,7 @@ class AuthorizeTests(TestCase):
             state="test_expiration_date_triggered",
             code="test_code",
             nonce="test_nonce",
-            usager=Usager.objects.get(sub="123"),
+            usager=Usager.objects.get(sub_fc="123"),
             expiresOn=date_further_away_minus_one_hour,
         )
 
@@ -181,7 +170,7 @@ class AuthorizeTests(TestCase):
         self.assertEqual(saved_items.count(), 2)
         connection = saved_items[1]
         state = connection.state
-        self.assertEqual(connection.usager.sub, "123")
+        self.assertEqual(connection.usager.sub_fc, "123")
         self.assertNotEqual(connection.nonce, "No Nonce Provided")
 
         url = reverse("fi_select_demarche") + "?state=" + state
@@ -203,18 +192,8 @@ class AuthorizeTests(TestCase):
 class FISelectDemarcheTest(TestCase):
     def setUp(self):
         self.client = Client()
-        self.aidant_thierry = factories.UserFactory()
-        self.usager = Usager.objects.create(
-            given_name="Joséphine",
-            family_name="ST-PIERRE",
-            preferred_username="ST-PIERRE",
-            birthdate="1969-12-15",
-            gender="female",
-            birthplace="70447",
-            birthcountry="99100",
-            sub="123",
-            email="User@user.domain",
-        )
+        self.aidant_thierry = UserFactory()
+        self.usager = UsagerFactory(given_name="Joséphine", sub_fc="123")
 
         self.connection = Connection.objects.create(
             state="test_state", code="test_code", nonce="test_nonce", usager=self.usager
@@ -344,16 +323,8 @@ class TokenTests(TestCase):
         self.connection.state = "test_state"
         self.connection.code = "test_code"
         self.connection.nonce = "test_nonce"
-        self.connection.usager = Usager.objects.create(
-            given_name="Joséphine",
-            family_name="ST-PIERRE",
-            preferred_username="ST-PIERRE",
-            birthdate="1969-12-15",
-            gender="female",
-            birthplace="70447",
-            birthcountry="99100",
-            sub="test_sub",
-            email="User@user.domain",
+        self.connection.usager = UsagerFactory(
+            given_name="Joséphine", sub_fc="test_sub"
         )
         self.connection.expiresOn = datetime(
             2012, 1, 14, 3, 21, 34, tzinfo=pytz_timezone("Europe/Paris")
@@ -385,14 +356,12 @@ class TokenTests(TestCase):
         awaited_response = {
             "access_token": connection.access_token,
             "expires_in": 3600,
-            "id_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ0ZXN0X2NsaWVud"
-            "F9pZCIsImV4cCI6MTMyNjUxMTI5NCwiaWF0IjoxMzI2NTEwNjk0LCJpc3MiOiJ"
-            "sb2NhbGhvc3QiLCJzdWIiOiJ0ZXN0X3N1YiIsIm5vbmNlIjoidGVzdF9ub25jZ"
-            "SJ9.aYSfYJK_Lml15DY7MuhrUBI1wja70WBfeyKqiUBMLlE",
+            # "id_token": "",
             "refresh_token": "5ieq7Bg173y99tT6MA",
             "token_type": "Bearer",
         }
 
+        del response_json["id_token"]  # sub_fi is random, can't test
         self.assertEqual(response_json, awaited_response)
 
     def test_wrong_grant_type_triggers_403(self):
@@ -454,7 +423,7 @@ class UserInfoTests(TestCase):
             gender="F",
             birthplace=70447,
             birthcountry=99100,
-            sub="test_sub",
+            sub_fc="test_sub",
             email="User@user.domain",
             creation_date="2019-08-05T15:49:13.972Z",
         )
@@ -467,12 +436,12 @@ class UserInfoTests(TestCase):
             gender="F",
             birthplace=70447,
             birthcountry=99100,
-            sub="test_sub2",
+            sub_fc="test_sub2",
             email="User@user.domain",
             creation_date="2019-08-05T15:49:13.972Z",
         )
 
-        self.aidant_thierry = factories.UserFactory()
+        self.aidant_thierry = UserFactory()
 
         self.mandat = Mandat.objects.create(
             aidant=self.aidant_thierry,
@@ -515,7 +484,8 @@ class UserInfoTests(TestCase):
             "gender": "F",
             "birthplace": "70447",
             "birthcountry": "99100",
-            "sub": "test_sub",
+            "sub_fc": "test_sub",
+            "sub_fi": self.connection.usager.sub_fi,
             "email": "User@user.domain",
             "creation_date": "2019-08-05T15:49:13.972Z",
         }

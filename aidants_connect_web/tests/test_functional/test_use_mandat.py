@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import tag
@@ -6,7 +6,7 @@ from django.utils import timezone
 from selenium.webdriver.firefox.webdriver import WebDriver
 from aidants_connect_web.models import Aidant, Usager, Mandat
 from aidants_connect_web.tests.test_functional.utilities import login_aidant
-from aidants_connect_web.tests.factories import UserFactory
+from aidants_connect_web.tests.factories import UserFactory, UsagerFactory
 
 import time
 
@@ -14,6 +14,11 @@ import time
 @tag("functional", "id_provider")
 class UseNewMandat(StaticLiveServerTestCase):
     @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.selenium = WebDriver()
+        cls.selenium.implicitly_wait(3)
+
     def setUp(self):
         self.aidant = UserFactory()
         UserFactory(
@@ -24,54 +29,36 @@ class UseNewMandat(StaticLiveServerTestCase):
             last_name="Fremont",
         )
 
-        self.usager = Usager.objects.create(
-            given_name="Joséphine",
-            family_name="ST-PIERRE",
-            preferred_username="ST-PIERRE",
-            birthdate=date(1969, 12, 25),
-            gender="female",
-            birthplace=70447,
-            birthcountry=99100,
-            sub="test_sub",
-            email="User@user.domain",
+        self.usager = UsagerFactory(
+            given_name="Joséphine", family_name="ST-PIERRE", sub_fc="test_sub",
         )
 
-        Usager.objects.create(
+        UsagerFactory(
             given_name="Anne Cécile Gertrude",
             family_name="EVALOUS",
-            preferred_username="Kasteign",
-            birthdate=date(1945, 2, 14),
-            gender="female",
-            birthplace=27448,
-            birthcountry=99100,
-            sub="test_sub_2",
-            email="akasteing@user.domain",
+            sub_fc="test_sub_2",
         )
 
         Mandat.objects.create(
             aidant=Aidant.objects.get(username="thierry@thierry.com"),
-            usager=Usager.objects.get(sub="test_sub"),
+            usager=Usager.objects.get(sub_fc="test_sub"),
             demarche="argent",
             expiration_date=timezone.now() + timedelta(days=6),
         )
 
         Mandat.objects.create(
             aidant=Aidant.objects.get(username="thierry@thierry.com"),
-            usager=Usager.objects.get(sub="test_sub"),
+            usager=Usager.objects.get(sub_fc="test_sub"),
             demarche="famille",
             expiration_date=timezone.now() + timedelta(days=12),
         )
 
         Mandat.objects.create(
             aidant=Aidant.objects.get(username="jfremont@domain.user"),
-            usager=Usager.objects.get(sub="test_sub"),
+            usager=Usager.objects.get(sub_fc="test_sub"),
             demarche="logement",
             expiration_date=timezone.now() + timedelta(days=12),
         )
-
-        super().setUpClass()
-        self.selenium = WebDriver()
-        self.selenium.implicitly_wait(3)
 
     @classmethod
     def tearDownClass(cls):

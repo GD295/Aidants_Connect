@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from selenium.webdriver.firefox.webdriver import WebDriver
 
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from aidants_connect_web.models import Aidant, Usager, Mandat
 from aidants_connect_web.tests.test_functional.utilities import login_aidant
-from aidants_connect_web.tests.factories import UserFactory
+from aidants_connect_web.tests.factories import UserFactory, UsagerFactory
 
 
 @tag("functional")
@@ -15,43 +15,23 @@ class ViewMandats(StaticLiveServerTestCase):
     @classmethod
     def setUpClass(cls):
         cls.user = UserFactory()
-        cls.usager = Usager.objects.create(
-            given_name="Joséphine",
-            family_name="ST-PIERRE",
-            preferred_username="ST-PIERRE",
-            birthdate=date(1969, 12, 25),
-            gender="female",
-            birthplace=70447,
-            birthcountry=99100,
-            sub="test_sub",
-            email="Aidant@user.domain",
-        )
-        cls.usager2 = Usager.objects.create(
-            given_name="Corentin",
-            family_name="DUPUIS",
-            preferred_username="DUPUIS",
-            birthdate=date(1983, 2, 3),
-            gender="male",
-            birthplace=70447,
-            birthcountry=99100,
-            sub="test_sub2",
-            email="Aidant2@user.domain",
-        )
+        cls.usager = UsagerFactory(given_name="Joséphine", sub_fc="test_sub")
+        cls.usager2 = UsagerFactory(given_name="Corentin", sub_fc="test_sub2")
         cls.mandat = Mandat.objects.create(
             aidant=Aidant.objects.get(username="thierry@thierry.com"),
-            usager=Usager.objects.get(sub="test_sub"),
+            usager=Usager.objects.get(sub_fc="test_sub"),
             demarche=["social"],
             expiration_date=timezone.now() + timedelta(days=6),
         )
         cls.mandat2 = Mandat.objects.create(
             aidant=Aidant.objects.get(username="thierry@thierry.com"),
-            usager=Usager.objects.get(sub="test_sub"),
+            usager=Usager.objects.get(sub_fc="test_sub"),
             demarche=["papiers"],
             expiration_date=timezone.now() + timedelta(days=1),
         )
         cls.mandat3 = Mandat.objects.create(
             aidant=Aidant.objects.get(username="thierry@thierry.com"),
-            usager=Usager.objects.get(sub="test_sub2"),
+            usager=Usager.objects.get(sub_fc="test_sub2"),
             demarche=["famille"],
             expiration_date=timezone.now() + timedelta(days=365),
         )

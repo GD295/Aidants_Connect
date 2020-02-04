@@ -10,7 +10,7 @@ from django.conf import settings
 
 from aidants_connect_web.models import Connection, CONNECTION_EXPIRATION_TIME, Usager
 from aidants_connect_web.views.FC_as_FS import get_user_info
-from aidants_connect_web.tests.factories import UserFactory
+from aidants_connect_web.tests.factories import UserFactory, UsagerFactory
 
 fc_callback_url = settings.FC_AS_FI_CALLBACK_URL
 
@@ -57,18 +57,7 @@ class FCCallback(TestCase):
             id=2,
         )
 
-        self.usager = Usager.objects.create(
-            given_name="Joséphine",
-            family_name="ST-PIERRE",
-            preferred_username="ST-PIERRE",
-            birthdate="1969-12-15",
-            gender="female",
-            birthplace="70447",
-            birthcountry="99100",
-            sub="123",
-            email="User@user.domain",
-            creation_date="2019-08-05T15:49:13.972Z",
-        )
+        self.usager = UsagerFactory(given_name="Joséphine", sub_fc="123")
 
     def test_no_code_triggers_403(self):
         response = self.client.get("/callback/", data={"state": "test_state"})

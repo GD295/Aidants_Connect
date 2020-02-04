@@ -264,7 +264,7 @@ def token(request):
         # The issuer,  the URL of your Auth0 tenant
         "iss": host,
         # The unique identifier of the user
-        "sub": connection.usager.sub,
+        "sub": connection.usager.sub_fi,
         "nonce": connection.nonce,
     }
 

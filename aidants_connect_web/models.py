@@ -1,3 +1,4 @@
+from secrets import token_hex
 from datetime import timedelta
 
 from django.db import models
@@ -124,7 +125,8 @@ class Usager(models.Model):
         default=99100,
         blank=False,
     )
-    sub = models.TextField(blank=False, unique=True)
+    sub_fc = models.TextField(blank=False, unique=True)
+    sub_fi = models.TextField(blank=True)  # TODO: blank=False, unique=True
 
     email = models.EmailField(
         blank=False, default="noemailprovided@aidantconnect.beta.gouv.fr"
@@ -136,6 +138,11 @@ class Usager(models.Model):
 
     def __str__(self):
         return f"{self.given_name} {self.family_name}"
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.sub_fi = token_hex(16)
+        super(Usager, self).save(*args, **kwargs)
 
     def get_full_name(self):
         return f"{self.given_name} {self.family_name}"
