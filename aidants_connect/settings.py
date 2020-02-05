@@ -256,6 +256,9 @@ MAGICAUTH_EMAIL_SENT_VIEW_TEMPLATE = "login/email_sent.html"
 MAGICAUTH_EMAIL_HTML_TEMPLATE = "login/email_template.html"
 MAGICAUTH_EMAIL_TEXT_TEMPLATE = "login/email_template.txt"
 
+# TOTP
+OTP_TOTP_ISSUER = os.getenv("OTP_TOTP_ISSUER", "Aidants Connect")
+
 # Emails
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
